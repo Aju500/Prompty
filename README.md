@@ -1,2 +1,2 @@
 # QueryMonitor
-A llm query and response analyzer
+A llm analyzer that extracts product mentions and brands from llm responses to given shopping queries
