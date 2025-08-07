@@ -10,23 +10,25 @@ from llm_clients.deepseek import query as get_deepseek_response
 # ======================================================================================
 
 st.set_page_config(
-    page_title="QueryMonitor",
+    page_title="Prompty",
     page_icon="🤖",
     layout="centered",
     initial_sidebar_state="expanded"
 )
 
-st.title("🤖 QueryMonitor")
+
+st.title("Prompty")
 
 # ======================================================================================
 # --- Sidebar Controls ---
 # ======================================================================================
 
 with st.sidebar:
+    st.image("logo.jpg", width=250)
+    
     st.header("Controls")
     model_option = st.selectbox(
         "Choose a Model:",
-        # These names are taken from the actual models your backend code calls.
         ("GPT-3.5-Turbo", "Gemini", "Mistral-7B Instruct"),
         key="model_select"
     )
@@ -34,7 +36,6 @@ with st.sidebar:
 
 # ======================================================================================
 # --- Chat History Management ---
-# Initializes a new chat history if the model is switched.
 # ======================================================================================
 
 if "current_model" not in st.session_state or st.session_state.current_model != model_option:
@@ -48,7 +49,6 @@ for message in st.session_state.messages:
 
 # ======================================================================================
 # --- Chat Input & Response Logic ---
-# Handles user input and calls the correct backend function.
 # ======================================================================================
 
 if prompt := st.chat_input("Ask your question here..."):
@@ -77,9 +77,7 @@ if prompt := st.chat_input("Ask your question here..."):
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
             except Exception as e:
-                # --- Graceful Error Handling ---
-                # If the backend code fails (e.g., Gemini error), the frontend
-                # will catch it and display it nicely instead of crashing.
+                # --- Error Handling ---
                 error_message = str(e)
                 st.error(error_message)
                 # Save the error to history so the user knows what happened.
