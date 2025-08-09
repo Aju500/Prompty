@@ -64,8 +64,8 @@ def get_llm_client(name: str):
         return gemini  # default fallback
 
 
-def process_prompts(csv_path="prompts+data.csv"):
-    df = pd.read_csv(csv_path, dtype={"productMentions": str, "brandMentions": str, "llm": str})
+def process_prompts(csv_path="prompts+data2.csv"):
+    df = pd.read_csv(csv_path, dtype={"productMentions": str, "brandMentions": str, "llm": str, "fullResponse": str})
 
     updated_rows = 0
 
