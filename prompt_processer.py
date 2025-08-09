@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from llm_clients import gemini, chatgpt, deepseek
 import time
+import json
 
 load_dotenv()
 
@@ -69,7 +70,7 @@ def process_prompts(csv_path="prompts+data.csv"):
     updated_rows = 0
 
     for i, row in df.iterrows():
-        if pd.notna(row["productMentions"]) and pd.notna(row["brandMentions"]):
+        if pd.notna(row["productMentions"]) and pd.notna(row["brandMentions"]) and pd.notna(row["fullResponse"]):
             continue
 
         prompt = row["prompt"]
@@ -91,6 +92,7 @@ def process_prompts(csv_path="prompts+data.csv"):
         products, brands = extract_mentions(response)
         df.at[i, "productMentions"] = "; ".join(products)
         df.at[i, "brandMentions"] = "; ".join(brands)
+        df.at[i, "fullResponse"] = json.dumps(response)
         updated_rows += 1
 
         time.sleep(1)
