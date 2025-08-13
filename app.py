@@ -1,4 +1,3 @@
-# app.py (The new B2B GEO Monitor Frontend)
 import streamlit as st
 import pandas as pd
 
@@ -13,7 +12,7 @@ from prompt_processor import run_geo_analysis, PROMPT_TEMPLATES
 # ======================================================================================
 st.set_page_config(page_title="Prompty GEO Monitor", page_icon="logo.png", layout="wide")
 
-# This is the corrected CSS for the reachfaster.ai navy/blue theme
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -33,7 +32,7 @@ st.markdown("""
 # --- Sidebar ---
 # ======================================================================================
 with st.sidebar:
-    st.image("logo.png", use_column_width=True)
+    st.image("logo.png", use_container_width=True)
     st.header("Analysis Controls")
     model_option = st.selectbox(
         "Choose Model for Analysis:",
@@ -60,14 +59,20 @@ llm_functions = {
 selected_llm_func = llm_functions[model_option]
 
 # --- Run Analysis Button ---
-if st.button("🚀 Run GEO Analysis", use_container_width=True):
-    # Call the main analysis function
-    analysis, raw_data, message = run_geo_analysis(category, selected_llm_func)
+if st.button("Run GEO Analysis 🚀 ", use_container_width=True):
+    # --- NEW: Unpack the new summary variable from the function call ---
+    analysis, summary, raw_data, message = run_geo_analysis(category, selected_llm_func)
     
     if analysis:
         st.success(message)
-        st.header("📊 GEO Analysis Dashboard")
+        st.header("GEO Analysis Dashboard 📊")
 
+        # --- NEW: Display the Key Insights Summary Section ---
+        st.subheader("Key Buying Factors & Buzzwords 💡")
+        st.markdown(summary)
+        st.divider()
+
+        # --- The original data tables and charts ---
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Top Brand Mentions")
