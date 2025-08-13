@@ -1,107 +1,98 @@
-import pandas as pd 
-import os
-from dotenv import load_dotenv
-from llm_clients import gemini, chatgpt, deepseek
-import time
-import json
+import streamlit as st
+import pandas as pd
+from llm_clients.gemini import query as extract_with_gemini
 
-load_dotenv()
+# --- Using the prompts from the CSV file as our pre-defined set ---
+PROMPT_TEMPLATES = {
+    "Tech": [
+        "What are the best gaming mouse brands with models available for under $100?",
+        "Best laptop for office work under $1000",
+        "What keyboard should I buy?",
+    ],
+    "Skincare": [
+        "Which brand is best for anti-aging night creams with retinol?",
+        "Best fragrance-free moisturizers for sensitive skin in humid weather",
+        "Can you give me some suggestions for natural skincare routines?",
+    ],
+    "Fitness": [
+        "Where can I buy home fitness equipment for small spaces?",
+        "Best at-home cardio equipment for beginners",
+        "Suggestion for a gym near me",
+    ],
+    "Home Essentials": [
+        "Which brand is best for a durable and easy-to-use knife sharpener?",
+        "Best air purifiers under $100 for bedrooms?",
+        "What are some suggestions for organizing a small kitchen efficiently?",
+    ],
+    "Fashion": [
+        "Which brand has the best formal wear?",
+        "Best affordable fashion brands for students",
+        "Suggestion for clothes to buy",
+    ],
+    # Add more categories and prompts as needed
+}
 
 EXTRACTION_PROMPT_TEMPLATE = """
-Extract and return:
-1. A list of product names mentioned in this text, double check if each is a real world product that belongs to a brand before returning, double check that each brand is real and current before returning, and return just the word "none" under the beginning of the list if there are none.
-2. A list of brand names mentioned in this text, double check that each brand is real and current before returning, and return just the word "none" under the beginning of the list if there are none.
+Analyze the following text. Extract brand names and specific product names mentioned.
 
-Output format (include nothing else):
-Products:
-- [product 1]
-- [product 2]
-...
+Rules:
+- List only real-world brands and products.
+- If no brands are mentioned, write "None".
+- If no products are mentioned, write "None".
 
+Output format (include nothing else but the lists):
 Brands:
-- [brand 1]
-- [brand 2]
-...
+- [Brand Name 1]
+
+Products:
+- [Product Name 1]
 
 Here is the text:
 \"\"\"{response}\"\"\"
 """
 
-def extract_mentions(response: str) -> tuple[list[str], list[str]]:
-    try:
-        prompt = EXTRACTION_PROMPT_TEMPLATE.format(response=response)
-        extraction_response = gemini.query(prompt)
-    except Exception as e:
-        print(f"[Extractor error] Gemini failed to extract: {e}")
-        return [], []
-
-    products, brands = [], []
-    current = None
-    for line in extraction_response.splitlines():
-        line = line.strip()
-        if line.lower().startswith("products"):
-            current = "product"
-        elif line.lower().startswith("brands"):
-            current = "brand"
-        elif line.startswith("- "):
+def parse_extraction(extraction_text: str) -> tuple[list, list]:
+    brands, products = [], []
+    current_section = None
+    for line in extraction_text.splitlines():
+        if "brands:" in line.lower(): current_section = "brands"
+        elif "products:" in line.lower(): current_section = "products"
+        elif line.startswith("- ") and "none" not in line.lower():
             item = line[2:].strip()
-            if current == "product":
-                products.append(item)
-            elif current == "brand":
-                brands.append(item)
-    return products, brands
+            if current_section == "brands": brands.append(item)
+            elif current_section == "products": products.append(item)
+    return brands, products
 
+def run_geo_analysis(category: str, get_llm_response_func):
+    if category not in PROMPT_TEMPLATES:
+        return None, [], f"Category '{category}' not found. Please try one of: {list(PROMPT_TEMPLATES.keys())}"
 
-def get_llm_client(name: str):
-    name = name.lower()
-    if name == "gemini":
-        return gemini
-    elif name == "chatgpt":
-        return chatgpt
-    elif name == "deepseek":
-        return deepseek
-    else:
-        return gemini  # default fallback
+    prompts = PROMPT_TEMPLATES[category]
+    raw_responses = []
+    all_brands, all_products = [], []
 
-
-def process_prompts(csv_path="prompts+data2.csv"):
-    df = pd.read_csv(csv_path, dtype={"productMentions": str, "brandMentions": str, "llm": str, "fullResponse": str})
-
-    updated_rows = 0
-
-    for i, row in df.iterrows():
-        if pd.notna(row["productMentions"]) and pd.notna(row["brandMentions"]) and pd.notna(row["fullResponse"]):
-            continue
-
-        prompt = row["prompt"]
-        llm_name = row.get("llm", "gemini")
-        llm_client = get_llm_client(llm_name)
-
+    progress_bar = st.progress(0, text="Starting analysis...")
+    for i, prompt in enumerate(prompts):
         try:
-            print(f"[{llm_name}] Querying for: {prompt}")
-            response = llm_client.query(prompt)
+            response = get_llm_response_func(prompt)
+            raw_responses.append({"prompt": prompt, "response": response})
+            
+            extraction_prompt = EXTRACTION_PROMPT_TEMPLATE.format(response=response)
+            extraction_text = extract_with_gemini(extraction_prompt)
+            
+            brands, products = parse_extraction(extraction_text)
+            all_brands.extend(brands)
+            all_products.extend(products)
         except Exception as e:
-            print(f"[Error] {llm_name} failed for row {i}: {e}")
-            try:
-                print(f"[Fallback] Using Gemini for: {prompt}")
-                response = gemini.query(prompt)
-            except Exception as fallback_error:
-                print(f"[Fallback Error] Gemini also failed: {fallback_error}")
-                continue  # Skip this row entirely
+            st.warning(f"Error on prompt: '{prompt}'. Skipping. Details: {e}")
+            continue
+        
+        progress_bar.progress((i + 1) / len(prompts), text=f"Processing prompt {i+1}/{len(prompts)}")
 
-        products, brands = extract_mentions(response)
-        df.at[i, "productMentions"] = "; ".join(products)
-        df.at[i, "brandMentions"] = "; ".join(brands)
-        df.at[i, "fullResponse"] = json.dumps(response)
-        updated_rows += 1
+    if not all_brands and not all_products:
+        return None, raw_responses, "Analysis complete, but no recognizable brands or products were extracted."
 
-        time.sleep(1)
-
-    if updated_rows > 0:
-        df.to_csv(csv_path, index=False)
-        print(f"✅ Updated {updated_rows} rows.")
-    else:
-        print("No new rows updated.")
-
-if __name__ == "__main__":
-    process_prompts()
+    brand_counts = pd.Series(all_brands).value_counts().rename("Mention Count")
+    product_counts = pd.Series(all_products).value_counts().rename("Mention Count")
+    
+    return {"brands": brand_counts, "products": product_counts}, raw_responses, "Analysis complete."
