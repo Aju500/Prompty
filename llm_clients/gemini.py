@@ -1,12 +1,26 @@
-from google import genai
+import google.generativeai as genai
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
-client = genai.Client()
+
+# The API key must be configured once for the entire library.
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def query(prompt: str) -> str:
+    """
+    Sends a prompt to the Google Gemini API using the correct methods.
+    """
     try:
-        response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+        # 1. Instantiate the specific model requested.
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # 2. Generate the content from the model instance.
+        response = model.generate_content(prompt)
+        
+        # 3. Return the text from the response.
         return response.text.strip()
+        
     except Exception as e:
-        raise RuntimeError(f"[Gemini error] {e}")
+        # Provides a helpful error if the API key is bad or the model name is inaccessible.
+        raise RuntimeError(f"[Gemini Error] Failed to get response: {e}")
