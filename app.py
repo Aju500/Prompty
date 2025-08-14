@@ -5,7 +5,7 @@ import pandas as pd
 from llm_clients.chatgpt import query as get_gpt_response
 from llm_clients.gemini import query as get_gemini_response
 from llm_clients.deepseek import query as get_mistral_response
-from prompt_processor import run_geo_analysis, PROMPT_TEMPLATES
+from prompt_processer import run_geo_analysis, PROMPT_TEMPLATES
 
 # ======================================================================================
 # --- Page Configuration & CSS ---
