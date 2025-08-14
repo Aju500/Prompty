@@ -8,7 +8,7 @@ if not HF_TOKEN:
     raise ValueError("HUGGINGFACE_API_TOKEN not found in .env file.")
 
 API_URL = "https://router.huggingface.co/v1/chat/completions"
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
+MODEL_ID = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B:cerebras"
 headers = {"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json"}
 
 def query(prompt: str) -> str:
