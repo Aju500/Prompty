@@ -4,7 +4,7 @@ import pandas as pd
 # --- Importing our backend toolkits ---
 from llm_clients.chatgpt import query as get_gpt_response
 from llm_clients.gemini import query as get_gemini_response
-from llm_clients.deepseek import query as get_mistral_response
+from llm_clients.deepseek import query as get_deepseek_response
 from prompt_processer import run_geo_analysis, PROMPT_TEMPLATES
 
 # ======================================================================================
@@ -36,7 +36,7 @@ with st.sidebar:
     st.header("Analysis Controls")
     model_option = st.selectbox(
         "Choose Model for Analysis:",
-        ("GPT-3.5-Turbo", "Gemini", "Mistral-7B Instruct")
+        ("GPT-3.5-Turbo", "Gemini", "Deepseek")
     )
     category = st.selectbox(
         "Choose a Product Category:",
@@ -54,7 +54,7 @@ st.write(f"Analyzing **{category}** prompts using **{model_option}**.")
 llm_functions = {
     "GPT-3.5-Turbo": get_gpt_response,
     "Gemini": get_gemini_response,
-    "Mistral-7B Instruct": get_mistral_response
+    "Deepseek": get_deepseek_response
 }
 selected_llm_func = llm_functions[model_option]
 
